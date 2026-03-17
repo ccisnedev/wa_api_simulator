@@ -275,8 +275,8 @@ Cada step sigue el ciclo Red-Green-Refactor. Al completar cada sub-paso, marcar 
 
 ### Step 16: README con instrucciones de setup y uso
 
-- [ ] Write failing test: N/A (documentación)
-- [ ] Implement:
+- [x] Write failing test: N/A (documentación)
+- [x] Implement:
   - Actualizar `README.md` con:
     - Descripción del simulador
     - Requisitos previos (Node.js 20 LTS)
@@ -284,7 +284,7 @@ Cada step sigue el ciclo Red-Green-Refactor. Al completar cada sub-paso, marcar 
     - Endpoints disponibles (tabla resumen)
     - Uso del dashboard
     - Troubleshooting (QR no aparece, sesión expira, etc.)
-- [ ] Mark completed checks in this RUNBOOK
+- [x] Mark completed checks in this RUNBOOK
 - [ ] `git add . && git commit -m "step 16: README con instrucciones de setup y uso"` (RUNBOOK updated)
 
 ---
