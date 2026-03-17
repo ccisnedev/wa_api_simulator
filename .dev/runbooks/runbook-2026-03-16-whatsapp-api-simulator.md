@@ -216,8 +216,8 @@ Cada step sigue el ciclo Red-Green-Refactor. Al completar cada sub-paso, marcar 
 
 ### Step 13: Baileys session manager — connect, disconnect, QR, reconnect
 
-- [ ] Write failing test: `src/__tests__/baileys/session.test.ts` — verifica que `BaileysSession` expone `isConnected()`, `currentQR()`, `phoneNumber()`, y que `connect()` inicializa el socket. (Tests unitarios con mock de `makeWASocket`)
-- [ ] Implement minimum code to pass:
+- [x] Write failing test: `src/__tests__/baileys/session.test.ts` — verifica que `BaileysSession` expone `isConnected()`, `currentQR()`, `phoneNumber()`, y que `connect()` inicializa el socket. (Tests unitarios con mock de `makeWASocket`)
+- [x] Implement minimum code to pass:
   - `src/baileys/session.ts` — clase `BaileysSession`:
     - `connect()`: `makeWASocket` + `useMultiFileAuthState('./auth_info_baileys')`, browser `Browsers.ubuntu('HELP Simulator')`
     - Evento `connection.update` → almacena QR, detecta open/close, reconexión con backoff exponencial (máx 5 intentos, no reconectar si `DisconnectReason.loggedOut`)
@@ -225,8 +225,8 @@ Cada step sigue el ciclo Red-Green-Refactor. Al completar cada sub-paso, marcar 
     - Evento `messages.upsert` → delega a normalizer → webhook dispatcher
     - `disconnect()`: cierra socket, opcionalmente borra `./auth_info_baileys/`
     - `isConnected()`, `currentQR()`, `phoneNumber()`
-- [ ] Refactor if needed
-- [ ] Mark completed checks in this RUNBOOK
+- [x] Refactor if needed
+- [x] Mark completed checks in this RUNBOOK
 - [ ] `git add . && git commit -m "step 13: Baileys session manager"` (all tests green, RUNBOOK updated)
 
 ---
