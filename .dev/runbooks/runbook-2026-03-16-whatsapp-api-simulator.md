@@ -126,33 +126,33 @@ Cada step sigue el ciclo Red-Green-Refactor. Al completar cada sub-paso, marcar 
 
 ### Step 6: Auth token middleware
 
-- [ ] Write failing test: `src/__tests__/middleware/auth-token.test.ts` — verifica que requests sin `Authorization` header retornan 401, con token inválido retornan 401, y con token correcto pasan al siguiente middleware
-- [ ] Implement minimum code to pass:
+- [x] Write failing test: `src/__tests__/middleware/auth-token.test.ts` — verifica que requests sin `Authorization` header retornan 401, con token inválido retornan 401, y con token correcto pasan al siguiente middleware
+- [x] Implement minimum code to pass:
   - `src/middleware/auth-token.ts` — middleware Express que valida `Bearer {ACCESS_TOKEN}`
-- [ ] Refactor if needed
-- [ ] Mark completed checks in this RUNBOOK
+- [x] Refactor if needed
+- [x] Mark completed checks in this RUNBOOK
 - [ ] `git add . && git commit -m "step 6: auth token middleware"` (all tests green, RUNBOOK updated)
 
 ---
 
 ### Step 7: Health route
 
-- [ ] Write failing test: `src/__tests__/routes/health.test.ts` — verifica que `GET /health` retorna `{ status, session, phone? }` con los valores correctos según el estado de la sesión (disconnected, connected)
-- [ ] Implement minimum code to pass:
+- [x] Write failing test: `src/__tests__/routes/health.test.ts` — verifica que `GET /health` retorna `{ status, session, phone? }` con los valores correctos según el estado de la sesión (disconnected, connected)
+- [x] Implement minimum code to pass:
   - `src/routes/health.route.ts` — ruta `GET /health` que consulta estado de sesión Baileys
-- [ ] Refactor if needed
-- [ ] Mark completed checks in this RUNBOOK
+- [x] Refactor if needed
+- [x] Mark completed checks in this RUNBOOK
 - [ ] `git add . && git commit -m "step 7: health route"` (all tests green, RUNBOOK updated)
 
 ---
 
 ### Step 8: Webhook verification route (hub.challenge)
 
-- [ ] Write failing test: `src/__tests__/routes/webhook.test.ts` — verifica que `GET /webhook?hub.mode=subscribe&hub.verify_token=correct&hub.challenge=test123` retorna 200 con body `test123`, y que token incorrecto retorna 400
-- [ ] Implement minimum code to pass:
+- [x] Write failing test: `src/__tests__/routes/webhook.test.ts` — verifica que `GET /webhook?hub.mode=subscribe&hub.verify_token=correct&hub.challenge=test123` retorna 200 con body `test123`, y que token incorrecto retorna 400
+- [x] Implement minimum code to pass:
   - `src/routes/webhook.route.ts` — ruta `GET /webhook` que implementa verificación §4.1 de spec
-- [ ] Refactor if needed
-- [ ] Mark completed checks in this RUNBOOK
+- [x] Refactor if needed
+- [x] Mark completed checks in this RUNBOOK
 - [ ] `git add . && git commit -m "step 8: webhook verification route (hub.challenge)"` (all tests green, RUNBOOK updated)
 
 ---
