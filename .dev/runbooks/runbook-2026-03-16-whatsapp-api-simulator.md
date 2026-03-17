@@ -170,20 +170,20 @@ Cada step sigue el ciclo Red-Green-Refactor. Al completar cada sub-paso, marcar 
 
 ### Step 10: Messages route — envío de texto con validación de ventana 24h
 
-- [ ] Write failing test: `src/__tests__/routes/messages.test.ts` — verifica:
+- [x] Write failing test: `src/__tests__/routes/messages.test.ts` — verifica:
   - `POST /{phone-number-id}/messages` con tipo `text` dentro de ventana → 200 con `wamid.sim_*`
   - `POST` con tipo `text` fuera de ventana → 400 con error code `131026`
   - `POST` sin auth → 401
   - `POST` con tipo `template` fuera de ventana → 200 (templates no validan ventana)
-- [ ] Implement minimum code to pass:
+- [x] Implement minimum code to pass:
   - `src/routes/messages.route.ts` — ruta `POST /:phoneNumberId/messages` que:
     - Valida auth token
     - Para `text`: consulta `SimulatorState.isWithin24hWindow(to)`, si no → error `131026`
     - Para `template`: resuelve template, sin validación de ventana
     - Envía mensaje vía Baileys `sock.sendMessage(jid, content)`
     - Retorna respuesta Meta-compatible con `wamid.sim_{uuid}`
-- [ ] Refactor if needed
-- [ ] Mark completed checks in this RUNBOOK
+- [x] Refactor if needed
+- [x] Mark completed checks in this RUNBOOK
 - [ ] `git add . && git commit -m "step 10: messages route — text + template + ventana 24h"` (all tests green, RUNBOOK updated)
 
 ---
