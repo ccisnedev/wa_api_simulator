@@ -115,11 +115,11 @@ Cada step sigue el ciclo Red-Green-Refactor. Al completar cada sub-paso, marcar 
 
 ### Step 5: Event normalizer — Baileys WAMessage → payload Meta
 
-- [ ] Write failing test: `src/__tests__/baileys/event-normalizer.test.ts` — dado un `WAMessage` mock de tipo texto, verifica que `normalizeInboundMessage(msg)` retorna payload idéntico a §5.1 de spec (con `wamid.sim_*`, estructura `entry[].changes[].value.messages[]`). Repetir para imagen, audio, video, documento
-- [ ] Implement minimum code to pass:
+- [x] Write failing test: `src/__tests__/baileys/event-normalizer.test.ts` — dado un `WAMessage` mock de tipo texto, verifica que `normalizeInboundMessage(msg)` retorna payload idéntico a §5.1 de spec (con `wamid.sim_*`, estructura `entry[].changes[].value.messages[]`). Repetir para imagen, audio, video, documento
+- [x] Implement minimum code to pass:
   - `src/baileys/event-normalizer.ts` — función `normalizeInboundMessage(msg, metadata)` que transforma WAMessage → webhook payload Meta. Función `normalizeStatusUpdate(status, metadata)` para delivered/read
-- [ ] Refactor if needed
-- [ ] Mark completed checks in this RUNBOOK
+- [x] Refactor if needed
+- [x] Mark completed checks in this RUNBOOK
 - [ ] `git add . && git commit -m "step 5: event normalizer — Baileys → Meta payload"` (all tests green, RUNBOOK updated)
 
 ---
