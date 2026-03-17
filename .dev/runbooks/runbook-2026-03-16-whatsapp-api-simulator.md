@@ -190,26 +190,26 @@ Cada step sigue el ciclo Red-Green-Refactor. Al completar cada sub-paso, marcar 
 
 ### Step 11: Media store — descarga eager + registro en state
 
-- [ ] Write failing test: `src/__tests__/media/media-store.test.ts` — verifica que `registerMedia(mediaId, buffer, mimeType)` guarda archivo en `./media/`, calcula SHA256, y registra en `SimulatorState.mediaStore`. Verifica que `getMediaMetadata(mediaId)` retorna la entrada correcta
-- [ ] Implement minimum code to pass:
+- [x] Write failing test: `src/__tests__/media/media-store.test.ts` — verifica que `registerMedia(mediaId, buffer, mimeType)` guarda archivo en `./media/`, calcula SHA256, y registra en `SimulatorState.mediaStore`. Verifica que `getMediaMetadata(mediaId)` retorna la entrada correcta
+- [x] Implement minimum code to pass:
   - `src/media/media-store.ts` — funciones `registerMedia(mediaId, buffer, mimeType, originalFileName?)` y `getMediaMetadata(mediaId)`
-- [ ] Refactor if needed
-- [ ] Mark completed checks in this RUNBOOK
+- [x] Refactor if needed
+- [x] Mark completed checks in this RUNBOOK
 - [ ] `git add . && git commit -m "step 11: media store — descarga eager + registro"` (all tests green, RUNBOOK updated)
 
 ---
 
 ### Step 12: Media routes — metadata + descarga binaria
 
-- [ ] Write failing test: `src/__tests__/routes/media.test.ts` — verifica:
+- [x] Write failing test: `src/__tests__/routes/media.test.ts` — verifica:
   - `GET /{media-id}` retorna JSON con `url`, `mime_type`, `sha256`, `file_size`, `id`
   - `GET /media/download/{media-id}` retorna binario con Content-Type correcto
   - Media inexistente → 404
   - Sin auth → 401
-- [ ] Implement minimum code to pass:
+- [x] Implement minimum code to pass:
   - `src/routes/media.route.ts` — rutas `GET /:mediaId` y `GET /media/download/:mediaId`
-- [ ] Refactor if needed
-- [ ] Mark completed checks in this RUNBOOK
+- [x] Refactor if needed
+- [x] Mark completed checks in this RUNBOOK
 - [ ] `git add . && git commit -m "step 12: media routes — metadata + descarga binaria"` (all tests green, RUNBOOK updated)
 
 ---
