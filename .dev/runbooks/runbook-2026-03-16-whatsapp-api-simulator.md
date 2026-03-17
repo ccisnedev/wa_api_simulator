@@ -257,8 +257,8 @@ Cada step sigue el ciclo Red-Green-Refactor. Al completar cada sub-paso, marcar 
 
 ### Step 15: Entrypoint main.ts — integración de todos los módulos
 
-- [ ] Write failing test: `src/__tests__/main.test.ts` — verifica que el servidor arranca correctamente, responde en `/health`, sirve `/dashboard`, y se cierra limpiamente (shutdown graceful)
-- [ ] Implement minimum code to pass:
+- [x] Write failing test: `src/__tests__/main.test.ts` — verifica que el servidor arranca correctamente, responde en `/health`, sirve `/dashboard`, y se cierra limpiamente (shutdown graceful)
+- [x] Implement minimum code to pass:
   - `src/main.ts` — entrypoint que:
     1. Carga config desde `.env` con `dotenv`
     2. Restaura `SimulatorState` desde `state.json`
@@ -267,8 +267,8 @@ Cada step sigue el ciclo Red-Green-Refactor. Al completar cada sub-paso, marcar 
     5. Inicia conexión Baileys
     6. Sirve en `PORT` (default 3001)
     7. Maneja SIGINT/SIGTERM: persiste estado, cierra socket, cierra servidor
-- [ ] Refactor if needed
-- [ ] Mark completed checks in this RUNBOOK
+- [x] Refactor if needed
+- [x] Mark completed checks in this RUNBOOK
 - [ ] `git add . && git commit -m "step 15: main.ts — entrypoint + integración completa"` (all tests green, RUNBOOK updated)
 
 ---
