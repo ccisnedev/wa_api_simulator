@@ -233,11 +233,11 @@ Cada step sigue el ciclo Red-Green-Refactor. Al completar cada sub-paso, marcar 
 
 ### Step 14: Dashboard — HTML + API endpoints de sesión
 
-- [ ] Write failing test: `src/__tests__/routes/dashboard.test.ts` — verifica:
+- [x] Write failing test: `src/__tests__/routes/dashboard.test.ts` — verifica:
   - `GET /dashboard` retorna HTML con status 200
   - `GET /api/session/status` retorna JSON con `{ status, phone?, qr? }`
   - `POST /api/session/logout` retorna 200 y desconecta sesión
-- [ ] Implement minimum code to pass:
+- [x] Implement minimum code to pass:
   - `src/dashboard/index.html` — SPA minimal con:
     - Área de QR code (renderizado vía polling cada 2s a `/api/session/status`)
     - Indicador de estado: `connected` / `disconnected` / `connecting`
@@ -249,8 +249,8 @@ Cada step sigue el ciclo Red-Green-Refactor. Al completar cada sub-paso, marcar 
     - `GET /api/session/status` → JSON con estado actual
     - `POST /api/session/logout` → desconecta y borra credenciales
     - `POST /api/session/pair` → solicita pairing code para número dado
-- [ ] Refactor if needed
-- [ ] Mark completed checks in this RUNBOOK
+- [x] Refactor if needed
+- [x] Mark completed checks in this RUNBOOK
 - [ ] `git add . && git commit -m "step 14: dashboard — HTML + API session endpoints"` (all tests green, RUNBOOK updated)
 
 ---
