@@ -159,11 +159,11 @@ Cada step sigue el ciclo Red-Green-Refactor. Al completar cada sub-paso, marcar 
 
 ### Step 9: Templates route
 
-- [ ] Write failing test: `src/__tests__/routes/templates.test.ts` — verifica que `GET /{waba-id}/message_templates` retorna lista de templates con estructura Meta, y filtra por `name`
-- [ ] Implement minimum code to pass:
+- [x] Write failing test: `src/__tests__/routes/templates.test.ts` — verifica que `GET /{waba-id}/message_templates` retorna lista de templates con estructura Meta, y filtra por `name`
+- [x] Implement minimum code to pass:
   - `src/routes/templates.route.ts` — ruta `GET /:wabaId/message_templates` con filtros opcionales (`name`, `status`, `language`)
-- [ ] Refactor if needed
-- [ ] Mark completed checks in this RUNBOOK
+- [x] Refactor if needed
+- [x] Mark completed checks in this RUNBOOK
 - [ ] `git add . && git commit -m "step 9: templates route"` (all tests green, RUNBOOK updated)
 
 ---
