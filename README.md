@@ -1,13 +1,12 @@
 # WhatsApp API Simulator
 
-> Simulador local de la WhatsApp Cloud API de Meta, basado en **Baileys v7** + **Express 4** + **TypeScript (ESM)**.  
-> Parte de la plataforma [H.E.L.P.](https://github.com/cacsi/help) — Helpdesk Event Loop Processor.
+> Simulador local de la WhatsApp Cloud API de Meta, basado en **Baileys v7** + **Express 4** + **TypeScript (ESM)**.
 
 ---
 
 ## Descripción
 
-El simulador expone endpoints **100% compatibles** con la API de Meta para WhatsApp Business. La plataforma H.E.L.P. interactúa con él exactamente igual que con Meta en producción. La migración a producción solo requiere cambiar la URL base y registrar el webhook en Meta Dashboard.
+El simulador expone endpoints **100% compatibles** con la API de Meta para WhatsApp Business. Cualquier aplicación que consuma la Cloud API de Meta puede usar este simulador sin modificaciones. La migración a producción solo requiere cambiar la URL base y registrar el webhook en Meta Dashboard.
 
 Funcionalidades principales:
 - Envío/recepción de mensajes vía Baileys (WhatsApp Web)
@@ -59,7 +58,7 @@ npm run dev
 
 ## Endpoints
 
-### Meta-compatible (consumidos por H.E.L.P.)
+### Meta-compatible
 
 | Método | Ruta | Descripción |
 |---|---|---|
@@ -134,7 +133,7 @@ El dashboard hace polling cada 2 segundos al endpoint `/api/session/status`.
 └─────────────────────────────────────────────┘
          │                    ▲
          ▼                    │
-   WhatsApp Web          H.E.L.P. Platform
+   WhatsApp Web          Your Application
    (via Baileys)         (callback URL)
 ```
 
@@ -166,6 +165,4 @@ El dashboard hace polling cada 2 segundos al endpoint `/api/session/status`.
 
 ---
 
-*H.E.L.P. · Helpdesk Event Loop Processor*  
-*H.E.L.P. · Helpdesk Event Loop Processor*  
-*WhatsApp API Simulator · CACSI*
+*WhatsApp API Simulator*

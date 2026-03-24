@@ -163,7 +163,7 @@ function extractMessageContent(
 
 /**
  * Transforms a Baileys WAMessage into the exact Meta webhook payload structure (§5.1 of spec).
- * This is the core normalization that makes H.E.L.P. Platform unable to distinguish
+ * This is the core normalization that makes consumers unable to distinguish
  * between the simulator and Meta's real API.
  */
 export function normalizeInboundMessage(

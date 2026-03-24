@@ -3,7 +3,7 @@ import { Router } from 'express';
 /**
  * GET /webhook — Meta webhook verification endpoint (§4.1 of spec).
  * Meta calls this to confirm the callback URL before registering it.
- * The simulator replicates this so H.E.L.P. can validate its webhook setup.
+ * The simulator replicates this so consumers can validate their webhook setup.
  */
 export function createWebhookRouter(verifyToken: string): Router {
   const router = Router();

@@ -58,7 +58,7 @@ export class BaileysSession {
     this.sock = makeWASocket({
       auth: state,
       version,
-      browser: Browsers.ubuntu('HELP Simulator'),
+      browser: Browsers.ubuntu('WA API Simulator'),
       logger: this.logger,
     });
 
