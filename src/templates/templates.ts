@@ -34,6 +34,20 @@ export const TEMPLATES: Template[] = [
       },
     ],
   },
+  {
+    id: 'sim_template_002',
+    name: 'otp_verification',
+    status: 'APPROVED',
+    category: 'AUTHENTICATION',
+    language: 'es',
+    components: [
+      {
+        type: 'BODY',
+        text: 'Tu código de verificación H.E.L.P. es: {{1}}',
+        paramCount: 1,
+      },
+    ],
+  },
 ];
 
 /** Finds a template by name, or undefined if not found. */

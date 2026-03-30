@@ -51,4 +51,19 @@ describe('templates', () => {
       expect(resolved).toContain('Test');
     });
   });
+
+  describe('otp_verification template', () => {
+    it('exists and is approved for authentication', () => {
+      const found = findTemplate('otp_verification');
+      expect(found).toBeDefined();
+      expect(found!.status).toBe('APPROVED');
+      expect(found!.category).toBe('AUTHENTICATION');
+      expect(found!.language).toBe('es');
+    });
+
+    it('resolves the OTP code into the body', () => {
+      const resolved = resolveTemplate('otp_verification', ['284719']);
+      expect(resolved).toBe('Tu código de verificación H.E.L.P. es: 284719');
+    });
+  });
 });
