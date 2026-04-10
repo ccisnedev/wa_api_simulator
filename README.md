@@ -152,6 +152,7 @@ El dashboard hace polling cada 2 segundos al endpoint `/api/session/status`.
 | Error `131026` al enviar mensaje | La ventana de 24h expiró. El usuario debe enviar un mensaje primero, o usar un template. |
 | `401 Unauthorized` en endpoints | Verificar que el header `Authorization: Bearer {ACCESS_TOKEN}` es correcto. |
 | Media no se descarga | Verificar permisos de escritura en `MEDIA_DIR`. |
+| `statusCode=401` + container en loop | **Bloqueo temporal de WhatsApp.** Ver [docs/alerta-bloqueo.md](docs/alerta-bloqueo.md). |
 
 ---
 

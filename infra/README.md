@@ -1,71 +1,73 @@
 # wa_api — Infraestructura de despliegue
 
-> Despliegue de wa_api en Google Cloud Compute Engine.
+> Despliegue de wa_api en Google Cloud Compute Engine.  
+> Una VM compartida aloja N simuladores como contenedores Docker independientes.
 
 ## Prerequisitos
 
 - [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) (`gcloud`) instalado y autenticado
 - Proyecto GCP: `wa-api-simulator`
 - DNS: acceso para crear A records en `cacsi.dev`
-- `.env.production` configurado en `wa_api/` (ver `.env.production.example`)
+- `.env.production.sN` configurado en `wa_api/` por instancia (ver `.env.production.example`)
 
 ## Estructura
 
 ```
 infra/
 ├── Dockerfile                    # Build multi-stage Node 20 Alpine
-├── docker-compose.prod.yml       # wa-api + Caddy (reverse proxy + TLS)
 ├── .env.production.example       # Template de variables de entorno
-├── caddy/
-│   └── Caddyfile                 # Bloquea /dashboard, proxy al API
+├── devtunnel.md                  # Guía de devtunnel para webhooks
 ├── scripts/
-│   ├── 01-create-vm.ps1          # Crea VM + IP + firewall
-│   ├── 02-setup-vm.ps1           # Instala Docker en la VM
-│   ├── 03-deploy.ps1             # Build + deploy containers
-│   ├── 04-ssh-tunnel.ps1         # Tunnel para acceder al dashboard
-│   └── 05-backup.ps1             # Backup credenciales → GCS
+│   ├── config.ps1                # Constantes + Resolve-SimulatorNames
+│   ├── 01-create-vm.ps1          # Crea VM + IP + firewall (una vez)
+│   ├── 02-setup-vm.ps1           # Instala Docker + Caddy (una vez)
+│   ├── 03-deploy.ps1 -SimId N    # Deploy simulador N
+│   ├── 04-ssh-tunnel.ps1 -SimId N # Tunnel al dashboard del sim N
+│   └── 05-backup.ps1 -SimId N    # Backup credenciales sim N → GCS
 └── README.md
 ```
 
 ## Quickstart
 
-### 1. Configurar .env.production
-
-```powershell
-cd wa_api
-cp infra/.env.production.example .env.production
-# Editar con valores reales (ACCESS_TOKEN, CALLBACK_URL, etc.)
-```
-
-### 2. Crear VM
+### 1. Crear VM (una sola vez)
 
 ```powershell
 cd wa_api/infra/scripts
 .\01-create-vm.ps1
 ```
 
-Output: IP estática. Crear A record `wa-api-s1.cacsi.dev` → IP.
+Output: IP estática. Crear A records para todos los subdominios → misma IP.
 
-### 3. Setup VM
+### 2. Setup VM (una sola vez)
 
 ```powershell
 .\02-setup-vm.ps1
 ```
 
-Instala Docker y prepara directorios en `/opt/wa-api/`.
+Instala Docker, crea red `wa-net` y despliega Caddy.
 
-### 4. Deploy
+### 3. Configurar .env.production.sN
 
 ```powershell
-.\03-deploy.ps1
+cd wa_api
+cp infra/.env.production.example .env.production.s1
+# Editar: PHONE_NUMBER, ACCESS_TOKEN, PORT=3001
+# CALLBACK_URL, VERIFY_TOKEN y APP_SECRET son opcionales — omitir para instancias solo outbound.
 ```
 
-Copia código, build del container, levanta wa-api + Caddy.
+### 4. Deploy simulador
+
+```powershell
+cd wa_api/infra/scripts
+.\03-deploy.ps1 -SimId 1
+```
+
+Copia código, build del container, regenera Caddyfile, recarga Caddy.
 
 ### 5. Vincular número (QR scan)
 
 ```powershell
-.\04-ssh-tunnel.ps1
+.\04-ssh-tunnel.ps1 -SimId 1
 ```
 
 1. Se abre un tunnel SSH que trae el puerto 3001 de la VM a tu PC
@@ -98,33 +100,33 @@ curl -X POST https://wa-api-s1.cacsi.dev/sim_pnid_001/messages `
 ### Redeploy (después de cambios)
 
 ```powershell
-.\03-deploy.ps1
+.\03-deploy.ps1 -SimId 1
 ```
 
 ### Backup de credenciales
 
 ```powershell
-.\05-backup.ps1
+.\05-backup.ps1 -SimId 1
 ```
 
-Sube `auth_info_baileys/` + `state.json` a `gs://wa-sim-cacsi-backups/`.
+Sube `auth_info_baileys/` de ese sim a `gs://wa-sim-cacsi-backups/`.
 
 ### Ver logs
 
 ```powershell
-gcloud compute ssh ccisnedev@wa-sim-cacsi-1 `
+gcloud compute ssh ccisnedev@wa-sim-cacsi `
   --project wa-api-simulator `
   --zone us-central1-a `
-  --command "docker logs wa-api --tail 100 -f"
+  --command "docker logs wa-api-s1 --tail 100 -f"
 ```
 
-### Restart
+### Restart un simulador
 
 ```powershell
-gcloud compute ssh ccisnedev@wa-sim-cacsi-1 `
+gcloud compute ssh ccisnedev@wa-sim-cacsi `
   --project wa-api-simulator `
   --zone us-central1-a `
-  --command "cd /opt/wa-api && docker compose -f infra/docker-compose.prod.yml restart"
+  --command "cd /opt/wa-api/s1 && docker compose restart"
 ```
 
 ## Seguridad
@@ -132,29 +134,21 @@ gcloud compute ssh ccisnedev@wa-sim-cacsi-1 `
 | Capa | Protege | Mecanismo |
 |------|---------|-----------|
 | Firewall GCP | Solo puertos 80, 443, 22 | Tags `http-server`, `https-server` |
-| Caddy | `/dashboard`, `/api/session/*` → 403 | Caddyfile |
+| Caddy | `/dashboard`, `/api/session/*` → 403 | Caddyfile (auto-generado) |
 | Bearer token | API de mensajes/templates/media | Middleware `auth-token.ts` |
 | SSH tunnel | Dashboard solo accesible vía tunnel | `gcloud compute ssh -L` |
 
 ## CALLBACK_URL (webhook)
 
 wa_api envía webhooks de mensajes entrantes al `CALLBACK_URL` configurado.
+**Es opcional** — si se omite, los mensajes entrantes se reciben pero no se reenvían (fidelidad con Meta).
 
 | Entorno | CALLBACK_URL |
 |---------|-------------|
 | Dev (help_api en tu PC) | `https://{id}.devtunnels.ms/api/v1/ingress/webhook` |
 | Producción | `https://help-api.cacsi.dev/api/v1/ingress/webhook` |
 
-Para desarrollo con devtunnel:
-
-```powershell
-# Crear tunnel persistente (una sola vez)
-devtunnel create wa-api-callback --allow-anonymous
-devtunnel port create wa-api-callback -p 8080
-
-# Antes de desarrollar
-devtunnel host wa-api-callback
-```
+Para desarrollo con devtunnel ver [devtunnel.md](devtunnel.md).
 
 ## Costos
 
@@ -164,4 +158,19 @@ devtunnel host wa-api-callback
 | Disco 10 GB | ~$1.00 |
 | IP estática | $0.00 |
 | GCS backups | ~$0.02 |
-| **Total** | **~$13.25** |
+| **Total (independiente de N sims)** | **~$13.25** |
+
+## Agregar nuevo simulador
+
+```powershell
+# 1. Crear .env
+cp infra/.env.production.example .env.production.sN
+# Editar PHONE_NUMBER, ACCESS_TOKEN, PORT=300N. Webhook es opcional.
+
+# 2. DNS
+# Crear A record: wa-api-sN.cacsi.dev → misma IP de wa-sim-cacsi
+
+# 3. Deploy
+.\03-deploy.ps1 -SimId N
+.\04-ssh-tunnel.ps1 -SimId N       # Escanear QR
+```

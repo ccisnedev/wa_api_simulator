@@ -1,39 +1,38 @@
 # Plan: Desplegar wa_api en Compute Engine
 
-> APE State: **PLAN** (v3 — actualizado 2026-04-09)  
+> APE State: **PLAN** (v4 — actualizado 2026-04-09)  
 > Análisis: [analyze/01-hosting-options.md](analyze/01-hosting-options.md),
->           [analyze/02-security-and-dashboard-access.md](analyze/02-security-and-dashboard-access.md)
+>           [analyze/02-security-and-dashboard-access.md](analyze/02-security-and-dashboard-access.md),
+>           [analyze/03-shared-vm-vs-vm-per-sim.md](analyze/03-shared-vm-vs-vm-per-sim.md)
 
 ---
 
 ## Alcance
 
-Crear la infraestructura de despliegue de wa_api en GCP. Todos los scripts
-son parametrizados con `-SimId` — soportan N simuladores con el mismo proceso.
+Desplegar wa_api en GCP con una **VM compartida** que aloja N simuladores como
+contenedores Docker independientes. Caddy sirve como reverse proxy multi-dominio.
 
-**Despliegue inicial:** ambos simuladores en la misma ejecución.
-Primero s1 (con devtunnel + webhook), luego s2 (solo outbound, sin webhook).
+**Despliegue inicial:** s1 (con devtunnel + webhook), luego s2 (solo outbound).
 
 Al terminar:
 
-- 2 VMs corriendo en `us-central1-a` con wa_api en Docker
-- HTTPS vía Caddy en `wa-api-s1.cacsi.dev` y `wa-api-s2.cacsi.dev`
+- 1 VM (`wa-sim-cacsi`) corriendo en `us-central1-a`
+- 2 simuladores como contenedores Docker independientes
+- HTTPS vía Caddy multi-dominio (`wa-api-s1.cacsi.dev`, `wa-api-s2.cacsi.dev`)
 - Dashboards protegidos (solo SSH tunnel)
 - APIs protegidos por Bearer token
 - s1 con webhook vía devtunnel, s2 sin webhook
 - Backup manual a GCS
-- Scripts parametrizados en `wa_api/infra/` — listos para replicar
+- Scripts parametrizados — agregar un simulador = 1 comando
 
 ## Instancias planificadas
 
-| SimId | Subdominio | Número | Webhook | Estado |
-|:-----:|-----------|--------|:-------:|--------|
-| 1 | `wa-api-s1.cacsi.dev` | 51933182642 | ✅ Sí (devtunnel → help_api) | Desplegar primero |
-| 2 | `wa-api-s2.cacsi.dev` | 51933152391 | ❌ No (solo outbound) | Desplegar segundo |
+| SimId | Subdominio | Número | Puerto | Webhook | Estado |
+|:-----:|-----------|--------|:------:|:-------:|--------|
+| 1 | `wa-api-s1.cacsi.dev` | 51933182642 | 3001 | ✅ Sí (devtunnel → help_api) | Desplegar primero |
+| 2 | `wa-api-s2.cacsi.dev` | 51933152391 | 3002 | ❌ No (solo outbound) | Desplegar segundo |
 
 ## Cambios de código previos al deploy
-
-Antes de crear infraestructura, wa_api necesita estas modificaciones:
 
 **`CALLBACK_URL`, `VERIFY_TOKEN`, `APP_SECRET` opcionales** (fidelidad con Meta):
 - `config.ts` — de `requireEnv()` a `process.env[] || undefined`
@@ -43,184 +42,170 @@ Antes de crear infraestructura, wa_api necesita estas modificaciones:
 Si `CALLBACK_URL` está ausente o vacío, los mensajes entrantes se reciben pero
 no se reenvían. Silencioso, sin error — exacto como hace Meta sin webhook registrado.
 
-## Estructura de archivos
+**Estado: ✅ ya completado** — build limpio, 88 tests pasando.
+
+## Arquitectura en la VM
+
+```
+/opt/wa-api/                        ← directorio raíz en la VM
+├── caddy/
+│   ├── docker-compose.yml          ← Caddy (1 instancia, multi-dominio)
+│   └── Caddyfile                   ← regenerado por 03-deploy.ps1
+├── s1/
+│   ├── docker-compose.yml          ← wa-api-s1 (solo este sim)
+│   ├── .env.production             ← config de s1 (PORT=3001)
+│   ├── auth_info_baileys/          ← credenciales Baileys s1
+│   └── media/                      ← media s1
+├── s2/
+│   ├── docker-compose.yml          ← wa-api-s2 (solo este sim)
+│   ├── .env.production             ← config de s2 (PORT=3002)
+│   ├── auth_info_baileys/          ← credenciales Baileys s2
+│   └── media/                      ← media s2
+└── src.tar.gz                      ← código fuente (compartido entre sims)
+```
+
+Cada simulador tiene su propio docker-compose — deployar s1 **no toca** s2.
+Caddy es compartido pero un `caddy reload` toma <1s sin cortar conexiones.
+
+Todos los contenedores comparten una red Docker (`wa-net`) para que Caddy
+pueda rutear a cada simulador por nombre de contenedor.
+
+## Estructura de archivos (repo)
 
 ```
 wa_api/
-├── .env.production.s1             # Config instancia s1 (gitignored)
-├── .env.production.s2             # Config instancia s2 (gitignored)
+├── .env.production.s1             # Config s1 (gitignored)
+├── .env.production.s2             # Config s2 (gitignored)
 └── infra/
     ├── Dockerfile                 # Build multi-stage Node 20 Alpine
-    ├── docker-compose.prod.yml    # wa-api + Caddy
     ├── .env.production.example    # Template de referencia
-    ├── caddy/
-    │   └── Caddyfile              # Generado por 03-deploy.ps1 (no editar)
+    ├── devtunnel.md               # Guía de devtunnel
     ├── scripts/
     │   ├── config.ps1             # Constantes + Resolve-SimulatorNames
-    │   ├── 01-create-vm.ps1       # -SimId → crea VM + IP + firewall
-    │   ├── 02-setup-vm.ps1        # -SimId → instala Docker
-    │   ├── 03-deploy.ps1          # -SimId → build + deploy (también updates)
-    │   ├── 04-ssh-tunnel.ps1      # -SimId → tunnel para QR scan
+    │   ├── 01-create-vm.ps1       # Crea VM + IP + firewall (sin SimId)
+    │   ├── 02-setup-vm.ps1        # Instala Docker (sin SimId)
+    │   ├── 03-deploy.ps1          # -SimId → deploy simulador a la VM
+    │   ├── 04-ssh-tunnel.ps1      # -SimId → tunnel al puerto del sim
     │   └── 05-backup.ps1          # -SimId → backup → GCS
     └── README.md                  # Guía completa de operaciones
 ```
 
 ### Naming por SimId
 
-Todos los nombres se resuelven desde `config.ps1 → Resolve-SimulatorNames`:
+`config.ps1 → Resolve-SimulatorNames`:
 
-| SimId | VM | IP | Subdominio | .env |
-|:-----:|----|----|-----------|------|
-| 1 | `wa-sim-cacsi-1` | `wa-sim-cacsi-1-ip` | `wa-api-s1.cacsi.dev` | `.env.production.s1` |
-| 2 | `wa-sim-cacsi-2` | `wa-sim-cacsi-2-ip` | `wa-api-s2.cacsi.dev` | `.env.production.s2` |
-| N | `wa-sim-cacsi-N` | `wa-sim-cacsi-N-ip` | `wa-api-sN.cacsi.dev` | `.env.production.sN` |
+| SimId | Container | Puerto | Subdominio | .env |
+|:-----:|-----------|:------:|-----------|------|
+| 1 | `wa-api-s1` | 3001 | `wa-api-s1.cacsi.dev` | `.env.production.s1` |
+| 2 | `wa-api-s2` | 3002 | `wa-api-s2.cacsi.dev` | `.env.production.s2` |
+| N | `wa-api-sN` | 300N | `wa-api-sN.cacsi.dev` | `.env.production.sN` |
+
+VM fija: `wa-sim-cacsi`, IP: `wa-sim-cacsi-ip` — no dependen de SimId.
 
 ---
 
 ## Pasos
 
-### Paso 1 — Cambios de código (webhook opcional)
+### Paso 1 — Cambios de código (webhook opcional) ✅
 
-Modificar wa_api para que `CALLBACK_URL` sea opcional:
-- `src/config.ts` — `callbackUrl`, `verifyToken`, `appSecret` opcionales
-- `src/main.ts` — condicionar `dispatchWebhook` a presencia de URL
-- `src/app.ts` — condicionar registro de ruta `/webhook` a presencia de token
+Ya completado. Build limpio, 88 tests pasando.
 
-**Criterio:** `npm run build` limpio + 88 tests pasando.
+### Paso 2 — Dockerfile ✅
 
-### Paso 2 — Dockerfile
+Ya existe (`wa_api/infra/Dockerfile`). Multi-stage Node 20 Alpine.
+Sin cambios — el `PORT` viene del `.env`, no hardcodeado.
 
-`wa_api/infra/Dockerfile` multi-stage:
-- Build: `node:20-alpine`, `npm ci`, `npm run build`
-- Production: `node:20-alpine`, `npm ci --omit=dev`, solo `dist/`
-- Expone 3001, CMD `node dist/main.js`
+### Paso 3 — Archivos .env por instancia ✅
 
-### Paso 3 — Docker Compose de producción
+`.env.production.s1` y `.env.production.s2` ya existen.
+Agregar `PORT=300N` en cada uno (`PORT=3001` en s1, `PORT=3002` en s2).
 
-`wa_api/infra/docker-compose.prod.yml`:
-- Servicio `wa-api`: build desde Dockerfile, `env_file: ../.env.production`,
-  restart always, healthcheck vía `/health`, volúmenes bind-mount para
-  `auth_info_baileys/` y `media/`
-- Servicio `caddy`: imagen `caddy:2-alpine`, Caddyfile montado, puertos 80/443,
-  volúmenes para data y config de TLS
-- Red interna `wa-net`
+### Paso 4 — Reescribir scripts para VM compartida
 
-El `03-deploy.ps1` copia `.env.production.sN` como `.env.production` en la VM.
+**`config.ps1`** — constantes compartidas:
+- `$VmName = 'wa-sim-cacsi'` (fijo, sin SimId)
+- `$IpName = 'wa-sim-cacsi-ip'` (fijo)
+- `Resolve-SimulatorNames -SimId N` → resuelve Container, Port, Subdomain, EnvFile
 
-### Paso 4 — Caddyfile (generado dinámicamente)
-
-El Caddyfile **no se edita manualmente** — `03-deploy.ps1` lo genera con el
-subdominio correcto según el SimId:
-- Bloquea `/dashboard*` y `/api/session/*` → `respond 403`
-- Proxy todo lo demás a `wa-api:3001`
-
-### Paso 5 — Archivos .env por instancia
-
-Template en `infra/.env.production.example`. Por instancia en `wa_api/`:
-
-**`.env.production.s1`** (webhook habilitado):
-- `PHONE_NUMBER=51933182642`
-- `CALLBACK_URL=https://{devtunnel}/api/v1/ingress/webhook`
-- `VERIFY_TOKEN`, `APP_SECRET` presentes
-
-**`.env.production.s2`** (solo outbound):
-- `PHONE_NUMBER=51933152391`
-- `CALLBACK_URL=` (vacío — sin webhook)
-- `VERIFY_TOKEN`, `APP_SECRET` ausentes o vacíos
-
-Cada instancia tiene su propio `ACCESS_TOKEN` único.
-
-### Paso 6 — Scripts parametrizados
-
-`config.ps1` — constantes compartidas:
-- Proyecto: `wa-api-simulator`, zona: `us-central1-a`, usuario: `ccisnedev`
-- `Resolve-SimulatorNames -SimId N` → resuelve nombres de todos los recursos
-
-`01-create-vm.ps1 -SimId N`:
-1. Reservar IP estática
-2. Crear VM e2-small, debian-12, disco 10 GB
-3. Crear firewall rules (compartidas, idempotentes)
+**`01-create-vm.ps1`** (sin `-SimId`):
+1. Reservar IP estática `wa-sim-cacsi-ip`
+2. Crear VM `wa-sim-cacsi` (e2-small, debian-12, 10 GB)
+3. Crear firewall rules (80, 443 — idempotentes)
 4. Mostrar IP para DNS
 
-`02-setup-vm.ps1 -SimId N`:
-1. Instalar Docker + Docker Compose vía SSH
-2. Crear `/opt/wa-api/` con subdirectorios
+**`02-setup-vm.ps1`** (sin `-SimId`):
+1. Instalar Docker + Docker Compose
+2. Crear `/opt/wa-api/caddy/`
+3. Crear red Docker `wa-net`
+4. Desplegar Caddy (docker-compose con solo el servicio caddy, puertos 80/443)
 
-`03-deploy.ps1 -SimId N` (primer deploy y updates):
-1. Verificar que `.env.production.sN` existe
-2. Generar Caddyfile con subdominio correcto
-3. Crear tarball del código (excluye node_modules, auth_info, .env)
-4. SCP tarball + `.env.production.sN` (como `.env.production`) a la VM
-5. Build y up containers
-6. Health check
+**`03-deploy.ps1 -SimId N`** (deploy de un simulador):
+1. Verificar que `.env.production.sN` existe localmente
+2. Crear tarball del código fuente (excluye node_modules, auth_info, .env, dist)
+3. SCP tarball + `.env.production.sN` → VM `/opt/wa-api/sN/`
+4. Generar `docker-compose.yml` para el sim (build, env_file, volumes, red wa-net)
+5. `docker compose build && docker compose up -d` en `/opt/wa-api/sN/`
+6. Regenerar Caddyfile (escanea todos los `/opt/wa-api/s*/` que existan)
+7. `docker exec caddy caddy reload` (recarga sin downtime)
+8. Health check: `curl localhost:300N/health`
 
-`04-ssh-tunnel.ps1 -SimId N`:
-1. Abre tunnel SSH (`-L 3001:localhost:3001`)
-2. Dashboard web accesible en `http://localhost:3001/dashboard`
+**`04-ssh-tunnel.ps1 -SimId N`**:
+1. Abre tunnel SSH (`-L 300N:localhost:300N`)
+2. Dashboard en `http://localhost:300N/dashboard`
 
-`05-backup.ps1 -SimId N`:
-1. Crear bucket GCS si no existe (compartido entre instancias)
-2. Comprimir `auth_info_baileys/` + `state.json` en la VM
+**`05-backup.ps1 -SimId N`**:
+1. Crear bucket GCS si no existe
+2. Comprimir `/opt/wa-api/sN/auth_info_baileys/` + `state.json` en la VM
 3. Subir a GCS con timestamp
 
-### Paso 7 — README de infra
+### Paso 5 — README de infra
 
-Documentar en `wa_api/infra/README.md`:
-- Prerequisitos (gcloud CLI, proyecto, DNS)
-- Quickstart paso a paso
-- Vinculación de número (QR scan vía tunnel)
-- Guía para agregar un nuevo simulador (5 pasos)
-- Operaciones: update, backup, restore, logs, restart
-- Seguridad (Caddy, Bearer token, firewall, SSH)
-- CALLBACK_URL: devtunnel (dev) vs dominio (prod)
-- Costos
+Actualizar `wa_api/infra/README.md`:
+- Quickstart: `01-create-vm` → `02-setup-vm` → `03-deploy -SimId 1`
+- Agregar simulador: solo `03-deploy -SimId N` + DNS A record
+- Operaciones: logs, restart, backup por SimId
+- Costos actualizados (~$13.25 total, independiente de N sims)
 
-### Paso 8 — Devtunnel para s1
+### Paso 6 — Devtunnel para s1 ✅
 
-Solo s1 necesita devtunnel (recibe webhooks de mensajes entrantes):
+Ya creado: `wa-api-callback` con puerto 8080.
+Pendiente: obtener URL al encender, actualizar CALLBACK_URL en `.env.production.s1`.
 
-1. `devtunnel create wa-api-callback --allow-anonymous`
-2. `devtunnel port create wa-api-callback -p 8080`
-3. Obtener URL → actualizar `CALLBACK_URL` en `.env.production.s1`
-4. Antes de desarrollar: `devtunnel host wa-api-callback`
+### Paso 7 — Crear VM + setup
 
-Temporal. Cuando help_api esté en la nube: `https://help-api.cacsi.dev/...`
+1. `.\01-create-vm.ps1` → anotar IP estática
+2. Crear A records DNS:
+   - `wa-api-s1.cacsi.dev` → IP
+   - `wa-api-s2.cacsi.dev` → IP (misma)
+3. `.\02-setup-vm.ps1`
 
-### Paso 9 — DNS + Despliegue s1
+### Paso 8 — Despliegue s1 (con webhook)
 
-1. `.\01-create-vm.ps1 -SimId 1` → anotar IP estática
-2. Crear A record `wa-api-s1.cacsi.dev` → IP estática de s1
-3. `.\02-setup-vm.ps1 -SimId 1`
-4. `.\03-deploy.ps1 -SimId 1`
-5. `.\04-ssh-tunnel.ps1 -SimId 1` → escanear QR en dashboard
-6. Verificar health: `curl https://wa-api-s1.cacsi.dev/health`
-7. Probar outbound: enviar mensaje a un número real
-8. Probar inbound: enviar mensaje desde WhatsApp, verificar webhook llega
+1. Encender devtunnel: `devtunnel host wa-api-callback`
+2. Obtener URL → actualizar `CALLBACK_URL` en `.env.production.s1`
+3. `.\03-deploy.ps1 -SimId 1`
+4. `.\04-ssh-tunnel.ps1 -SimId 1` → escanear QR en dashboard
+5. Verificar health: `curl https://wa-api-s1.cacsi.dev/health`
+6. Probar outbound: enviar mensaje a un número real
+7. Probar inbound: enviar mensaje desde WhatsApp → verificar webhook llega
 
-### Paso 10 — Despliegue s2 (sin webhook)
+### Paso 9 — Despliegue s2 (sin webhook)
 
-1. `.\01-create-vm.ps1 -SimId 2` → anotar IP estática
-2. Crear A record `wa-api-s2.cacsi.dev` → IP estática de s2
-3. `.\02-setup-vm.ps1 -SimId 2`
-4. `.\03-deploy.ps1 -SimId 2`
-5. `.\04-ssh-tunnel.ps1 -SimId 2` → escanear QR en dashboard
-6. Verificar health: `curl https://wa-api-s2.cacsi.dev/health`
-7. Probar outbound: enviar mensaje a un número real
-8. Confirmar que NO envía webhooks (no hay CALLBACK_URL)
+1. `.\03-deploy.ps1 -SimId 2`
+2. `.\04-ssh-tunnel.ps1 -SimId 2` → escanear QR en dashboard
+3. Verificar health: `curl https://wa-api-s2.cacsi.dev/health`
+4. Probar outbound: enviar mensaje a un número real
+5. Confirmar que NO envía webhooks (no hay CALLBACK_URL)
 
 ---
 
 ## Guía: agregar un nuevo simulador
 
-Para desplegar `wa-api-sN.cacsi.dev` con un número nuevo:
-
 ```
-1. Crear .env.production.sN con el nuevo PHONE_NUMBER y ACCESS_TOKEN
-2. .\01-create-vm.ps1 -SimId N
-3. Crear DNS A record: wa-api-sN.cacsi.dev → IP mostrada
-4. .\02-setup-vm.ps1 -SimId N
-5. .\03-deploy.ps1 -SimId N
-6. .\04-ssh-tunnel.ps1 -SimId N → escanear QR
+1. Crear .env.production.sN con PHONE_NUMBER, ACCESS_TOKEN, PORT=300N
+2. Crear DNS A record: wa-api-sN.cacsi.dev → IP de wa-sim-cacsi
+3. .\03-deploy.ps1 -SimId N
+4. .\04-ssh-tunnel.ps1 -SimId N → escanear QR
 ```
 
 Para actualizar código en una instancia existente:
@@ -229,6 +214,16 @@ Para actualizar código en una instancia existente:
 ```
 
 ---
+
+## Costos
+
+| Recurso | Costo/mes |
+|---------|:---------:|
+| VM e2-small (us-central1) | ~$12.23 |
+| Disco balanced 10 GB | ~$1.00 |
+| IP estática (en uso) | $0.00 |
+| GCS bucket (backups, <1 GB) | ~$0.02 |
+| **Total (independiente de N sims)** | **~$13.25** |
 
 ## Criterio de aceptación
 
