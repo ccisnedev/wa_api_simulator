@@ -1,3 +1,26 @@
-# .dev 
+# .dev
 .dev/*
 !.dev/runbooks
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment
+.env
+.env.production
+.env.production.*
+
+# Baileys session credentials
+auth_info_baileys/
+
+# Media storage
+media/
+
+# Simulator persisted state
+state.json
+
+# Logs
+*.log
