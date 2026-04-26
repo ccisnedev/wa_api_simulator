@@ -21,29 +21,29 @@ Si implementamos boot condicional, QR bajo demanda, y manejo correcto de Disconn
 **Salida:** `BaileysSession` con `isPairing`, `hasCredentials()`, manejo de disconnect por categoría  
 **Archivos:** `src/baileys/session.ts`, tests
 
-- [ ] 1.1 Agregar campo privado `isPairing: boolean = false` a `BaileysSession`
-- [ ] 1.2 Agregar campo privado `dashboardState: string = 'idle'` con valores: `'idle'|'pairing_qr'|'qr_expired'|'connecting'|'connected'|'replaced'|'error'`
-- [ ] 1.3 Agregar campo privado `statusMessage: string = ''`
-- [ ] 1.4 Agregar método público `hasCredentials(): boolean` — verifica existencia de `<authDir>/creds.json` con `existsSync`
-- [ ] 1.5 Agregar métodos públicos `getDashboardStatus(): string` y `getStatusMessage(): string`
-- [ ] 1.6 Modificar `connect()`:
+- [x] 1.1 Agregar campo privado `isPairing: boolean = false` a `BaileysSession`
+- [x] 1.2 Agregar campo privado `dashboardState: string = 'idle'` con valores: `'idle'|'pairing_qr'|'qr_expired'|'connecting'|'connected'|'replaced'|'error'`
+- [x] 1.3 Agregar campo privado `statusMessage: string = ''`
+- [x] 1.4 Agregar método público `hasCredentials(): boolean` — verifica existencia de `<authDir>/creds.json` con `existsSync`
+- [x] 1.5 Agregar métodos públicos `getDashboardStatus(): string` y `getStatusMessage(): string`
+- [x] 1.6 Modificar `connect()`:
   - Si `!hasCredentials()` → `isPairing = true`, `dashboardState = 'pairing_qr'`
   - Si `hasCredentials()` → `isPairing = false`, `dashboardState = 'connecting'`
-- [ ] 1.7 Modificar handler de evento `qr` en `handleConnectionUpdate`:
+- [x] 1.7 Modificar handler de evento `qr` en `handleConnectionUpdate`:
   - Setear `dashboardState = 'pairing_qr'` (ya seteaba `connected = false`)
-- [ ] 1.8 Modificar handler de `connection='open'`:
+- [x] 1.8 Modificar handler de `connection='open'`:
   - `isPairing = false`, `dashboardState = 'connected'`, `statusMessage = ''`
-- [ ] 1.9 Refactorizar handler de `connection='close'` por categoría de DisconnectReason:
+- [x] 1.9 Refactorizar handler de `connection='close'` por categoría de DisconnectReason:
   - **QR timeout** (408 + `isPairing`): `dashboardState = 'qr_expired'`, `statusMessage = 'El código QR expiró'`, NO auto-reconnect, limpiar QR
   - **Terminal** (401, 500): borrar directorio `auth_info_baileys/` con `rmSync({recursive:true,force:true})`, `dashboardState = 'idle'`, `statusMessage = 'Sesión cerrada por WhatsApp'`, `isPairing = false`, NO auto-reconnect
   - **Conflicto** (440): `dashboardState = 'replaced'`, `statusMessage = 'WhatsApp está abierto en otro dispositivo'`, NO auto-reconnect
   - **Transitorio** (428, 503, 408 sin `isPairing`): `dashboardState = 'connecting'`, auto-reconnect con backoff existente
   - **Fatal** (403, 411): `dashboardState = 'error'`, `statusMessage` descriptivo, NO auto-reconnect
   - **Restart** (515): auto-restart inmediato
-- [ ] 1.10 Escribir tests unitarios para `hasCredentials()`:
+- [x] 1.10 Escribir tests unitarios para `hasCredentials()`:
   - Test con `creds.json` existente → `true`
   - Test sin `creds.json` → `false`
-- [ ] 1.11 Escribir tests unitarios para `handleConnectionUpdate` por cada categoría:
+- [x] 1.11 Escribir tests unitarios para `handleConnectionUpdate` por cada categoría:
   - Test 408 + isPairing → qr_expired, no reconnect
   - Test 408 + !isPairing → connecting, sí reconnect
   - Test 401 → idle, creds borradas
@@ -51,7 +51,7 @@ Si implementamos boot condicional, QR bajo demanda, y manejo correcto de Disconn
   - Test 440 → replaced, no reconnect
   - Test 428 → connecting, sí reconnect
   - Test 503 → connecting, sí reconnect
-- [ ] 1.12 Ejecutar `npm test` — todos los tests pasan
+- [x] 1.12 Ejecutar `npm test` — todos los tests pasan (1 fallo pre-existente en config.test.ts, no relacionado)
 
 **Verificación pseudocódigo:**
 ```

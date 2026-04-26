@@ -6,6 +6,7 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 import type { WASocket, BaileysEventMap, ConnectionState } from '@whiskeysockets/baileys';
 import type { Boom } from '@hapi/boom';
+import { existsSync, rmSync } from 'node:fs';
 import pino from 'pino';
 import type { SessionStatusProvider } from '../routes/health.route.js';
 import type { MessageSender } from '../routes/messages.route.js';
@@ -33,6 +34,9 @@ export class BaileysSession {
   private qrCode: string | undefined;
   private phone: string | undefined;
   private reconnectAttempts = 0;
+  private isPairing = false;
+  private dashboardState: 'idle' | 'pairing_qr' | 'qr_expired' | 'connecting' | 'connected' | 'replaced' | 'error' = 'idle';
+  private statusMessage = '';
   private readonly config: BaileysSessionConfig;
   private readonly logger = pino({ level: 'silent' });
   private readonly appLogger = pino({ transport: { target: 'pino-pretty' } });
@@ -52,6 +56,14 @@ export class BaileysSession {
         await this.sock.end(undefined);
       } catch { /* ignore */ }
       this.sock = null;
+    }
+
+    if (this.hasCredentials()) {
+      this.isPairing = false;
+      this.dashboardState = 'connecting';
+    } else {
+      this.isPairing = true;
+      this.dashboardState = 'pairing_qr';
     }
 
     const { state, saveCreds } = await useMultiFileAuthState(this.config.authDir);
@@ -120,6 +132,18 @@ export class BaileysSession {
     return this.phone;
   }
 
+  hasCredentials(): boolean {
+    return existsSync(`${this.config.authDir}/creds.json`);
+  }
+
+  getDashboardStatus(): string {
+    return this.dashboardState;
+  }
+
+  getStatusMessage(): string {
+    return this.statusMessage;
+  }
+
   /** Returns the socket for direct use (e.g., sending messages). */
   socket(): WASocket | null {
     return this.sock;
@@ -161,6 +185,7 @@ export class BaileysSession {
     if (qr) {
       this.qrCode = qr;
       this.connected = false;
+      this.dashboardState = 'pairing_qr';
       this.appLogger.info('QR code received — open http://localhost:3001/dashboard to scan');
     }
 
@@ -168,6 +193,9 @@ export class BaileysSession {
       this.connected = true;
       this.qrCode = undefined;
       this.reconnectAttempts = 0;
+      this.isPairing = false;
+      this.dashboardState = 'connected';
+      this.statusMessage = '';
       this.phone = this.sock?.user?.id?.replace(/@.*/, '').replace(/:.*/, '');
       this.appLogger.info('WhatsApp connected — phone: %s', this.phone);
     }
@@ -177,23 +205,43 @@ export class BaileysSession {
 
       const error = lastDisconnect?.error;
       const statusCode = (error as Boom)?.output?.statusCode;
-      const isLoggedOut = statusCode === DisconnectReason.loggedOut;
 
       this.appLogger.error('Connection closed — statusCode=%d error=%s', statusCode, error?.message ?? 'unknown');
 
-      if (isLoggedOut) {
+      if (statusCode === 408 && this.isPairing) {
+        // QR timeout — user didn't scan in time
+        this.dashboardState = 'qr_expired';
+        this.statusMessage = 'El código QR expiró';
         this.qrCode = undefined;
-      }
-
-      if (!isLoggedOut && this.reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-        this.reconnectAttempts++;
-        const backoffMs = Math.min(Math.pow(2, this.reconnectAttempts) * 1000, 30_000);
-        this.appLogger.info('Connection closed — reconnecting in %dms (attempt %d/%d)', backoffMs, this.reconnectAttempts, MAX_RECONNECT_ATTEMPTS);
-        setTimeout(() => this.connect(), backoffMs);
-      } else if (isLoggedOut) {
-        this.appLogger.warn('Logged out — scan QR again via dashboard');
-      } else {
-        this.appLogger.error('Max reconnection attempts reached (%d)', MAX_RECONNECT_ATTEMPTS);
+      } else if (statusCode === 401 || statusCode === 500) {
+        // Terminal — session invalidated by WhatsApp
+        rmSync(this.config.authDir, { recursive: true, force: true });
+        this.dashboardState = 'idle';
+        this.statusMessage = 'Sesión cerrada por WhatsApp';
+        this.isPairing = false;
+        this.qrCode = undefined;
+      } else if (statusCode === 440) {
+        // Conflict — another device took over
+        this.dashboardState = 'replaced';
+        this.statusMessage = 'WhatsApp está abierto en otro dispositivo';
+      } else if (statusCode === 428 || statusCode === 503 || (statusCode === 408 && !this.isPairing)) {
+        // Transient — recoverable with backoff
+        this.dashboardState = 'connecting';
+        if (this.reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          this.reconnectAttempts++;
+          const backoffMs = Math.min(Math.pow(2, this.reconnectAttempts) * 1000, 30_000);
+          this.appLogger.info('Reconnecting in %dms (attempt %d/%d)', backoffMs, this.reconnectAttempts, MAX_RECONNECT_ATTEMPTS);
+          setTimeout(() => this.connect(), backoffMs);
+        }
+      } else if (statusCode === 403 || statusCode === 411) {
+        // Fatal — unrecoverable
+        this.dashboardState = 'error';
+        this.statusMessage = statusCode === 403
+          ? 'Acceso prohibido por WhatsApp'
+          : 'Incompatibilidad de dispositivos';
+      } else if (statusCode === 515) {
+        // Restart required
+        setTimeout(() => this.connect(), 0);
       }
     }
   }
