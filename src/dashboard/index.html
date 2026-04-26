@@ -204,6 +204,7 @@
           badge.classList.add('status-disconnected');
           badge.textContent = 'error';
           showStatusMessage(data.statusMessage || 'Error desconocido');
+          btnLink.style.display = 'inline-block';
           currentQR = '';
           break;
 
