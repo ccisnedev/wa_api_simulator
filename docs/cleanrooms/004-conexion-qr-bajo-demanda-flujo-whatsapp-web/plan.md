@@ -94,7 +94,7 @@ assert session.reconnectAttempts > 0
   }
   ```
 - [x] 2.2 Ejecutar `npm test` — todos los tests pasan
-- [ ] 2.3 Verificación manual: arrancar sin creds → server inicia, no genera QR, log visible
+- [x] 2.3 Verificación manual: arrancar sin creds → server inicia, no genera QR, log visible
 
 **Verificación:** Server arranca sin errores en ambos escenarios. Sin creds: no hay output de QR ni intento de conexión.
 
@@ -141,7 +141,7 @@ assert session.reconnectAttempts > 0
 - [x] 4.6 Estado REPLACED: badge naranja "Sesión reemplazada", mensaje "WhatsApp está abierto en otro dispositivo", botón verde "Usar aquí" → `POST /api/session/reconnect`
 - [x] 4.7 Estado ERROR: badge rojo "Error", `statusMessage` del servidor, sin botón de acción automática
 - [x] 4.8 Actualizar función de polling para manejar todos los `status` strings del API
-- [ ] 4.9 Test manual end-to-end:
+- [x] 4.9 Test manual end-to-end:
   - Arrancar sin creds → IDLE → click "Vincular" → PAIRING_QR → esperar ~140s → QR_EXPIRED → click "Recargar" → PAIRING_QR nuevo
   - Arrancar con creds → CONNECTING → CONNECTED
   - En CONNECTED → "Cerrar sesión" → IDLE
@@ -157,7 +157,7 @@ assert session.reconnectAttempts > 0
 
 - [x] 5.1 Ejecutar `npm test` — suite completa pasa
 - [x] 5.2 Ejecutar `npm run build` (o `npx tsc --noEmit`) — TypeScript compila sin errores
-- [ ] 5.3 Revisión de regresión: verificar que instancia con creds existentes (simular s1) arranca y reconecta normalmente
+- [x] 5.3 Revisión de regresión: verificar que instancia con creds existentes (simular s1) arranca y reconecta normalmente
 - [x] 5.4 Producir `retrospective.md`:
   - Qué salió bien
   - Qué se desvió del plan

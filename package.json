@@ -1,6 +1,6 @@
 {
   "name": "wa-api-simulator",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "WhatsApp Cloud API Simulator — local Baileys-based bridge compatible with Meta's API",
   "type": "module",
   "engines": {
