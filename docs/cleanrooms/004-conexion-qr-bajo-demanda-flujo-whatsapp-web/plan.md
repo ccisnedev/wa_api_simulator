@@ -85,7 +85,7 @@ assert session.reconnectAttempts > 0
 **Salida:** Server arranca sin `connect()` cuando no hay creds  
 **Archivos:** `src/main.ts`
 
-- [ ] 2.1 Reemplazar `await session.connect()` (L69) por:
+- [x] 2.1 Reemplazar `await session.connect()` (L69) por:
   ```typescript
   if (session.hasCredentials()) {
     await session.connect();
@@ -93,7 +93,7 @@ assert session.reconnectAttempts > 0
     logger.info('No credentials found — waiting for device linking via dashboard');
   }
   ```
-- [ ] 2.2 Ejecutar `npm test` — todos los tests pasan
+- [x] 2.2 Ejecutar `npm test` — todos los tests pasan
 - [ ] 2.3 Verificación manual: arrancar sin creds → server inicia, no genera QR, log visible
 
 **Verificación:** Server arranca sin errores en ambos escenarios. Sin creds: no hay output de QR ni intento de conexión.

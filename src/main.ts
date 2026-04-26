@@ -68,12 +68,16 @@ const server = app.listen(config.port, () => {
   logger.info('Dashboard: http://localhost:%d/dashboard', config.port);
 });
 
-// ── 6. Connect to WhatsApp ──
-session.connect().then(() => {
-  logger.info('Baileys session connection initiated');
-}).catch((err) => {
-  logger.error(err, 'Failed to initiate Baileys connection');
-});
+// ── 6. Connect to WhatsApp (only if credentials exist) ──
+if (session.hasCredentials()) {
+  session.connect().then(() => {
+    logger.info('Baileys session connection initiated');
+  }).catch((err) => {
+    logger.error(err, 'Failed to initiate Baileys connection');
+  });
+} else {
+  logger.info('No credentials found — waiting for device linking via dashboard');
+}
 
 // ── 7. Graceful shutdown ──
 function gracefulShutdown(signal: string) {
