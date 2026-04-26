@@ -39,9 +39,11 @@
     .status-connected { background: #00a884; color: #111b21; }
     .status-connecting { background: #f7c948; color: #111b21; }
     .status-disconnected { background: #ea4335; color: #fff; }
+    .status-replaced { background: #e67e22; color: #fff; }
     .phone { font-size: 1.1rem; margin-bottom: 1rem; }
     #qr-container { margin: 1rem 0; }
     #qr-container img { max-width: 260px; border-radius: 8px; background: #fff; padding: 8px; }
+    .qr-instructions { font-size: 0.8rem; color: #8696a0; margin-top: 0.5rem; line-height: 1.4; }
     .btn {
       display: inline-block;
       padding: 0.6rem 1.4rem;
@@ -59,6 +61,17 @@
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .actions { margin-top: 1rem; }
     .info { font-size: 0.8rem; color: #8696a0; margin-top: 1rem; }
+    .status-msg { font-size: 0.85rem; color: #8696a0; margin-bottom: 1rem; }
+    .spinner {
+      display: inline-block;
+      width: 32px; height: 32px;
+      border: 3px solid #8696a0;
+      border-top-color: #00a884;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 1rem 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -66,33 +79,40 @@
     <h1>WhatsApp API Simulator</h1>
     <p class="subtitle">Session Dashboard</p>
 
-    <div id="status-badge" class="status-badge status-disconnected">disconnected</div>
+    <div id="status-badge" class="status-badge status-disconnected">desconectado</div>
+
+    <div id="status-msg" class="status-msg" style="display:none;"></div>
 
     <div id="phone-display" class="phone" style="display:none;"></div>
 
     <div id="qr-container" style="display:none;">
       <img id="qr-image" alt="QR Code" />
-      <p class="info">Escanea el código QR con WhatsApp</p>
+      <p class="qr-instructions">Abre WhatsApp &gt; Dispositivos vinculados &gt;<br>Vincular dispositivo &gt; Escanea el código QR</p>
     </div>
 
-    <div id="waiting-msg" style="display:none;">
-      <p class="info">Esperando sesión…</p>
+    <div id="spinner-container" style="display:none;">
+      <div class="spinner"></div>
     </div>
 
     <div class="actions">
       <button id="btn-logout" class="btn btn-danger" style="display:none;" onclick="doLogout()">Cerrar sesión</button>
-      <button id="btn-reconnect" class="btn btn-primary" style="display:none;" onclick="doReconnect()">Reconectar</button>
+      <button id="btn-link" class="btn btn-primary" style="display:none;" onclick="doReconnect()">Vincular dispositivo</button>
+      <button id="btn-reload-qr" class="btn btn-primary" style="display:none;" onclick="doReconnect()">Recargar QR</button>
+      <button id="btn-use-here" class="btn btn-primary" style="display:none;" onclick="doReconnect()">Usar aquí</button>
     </div>
   </div>
 
   <script>
     const badge = document.getElementById('status-badge');
+    const statusMsg = document.getElementById('status-msg');
     const phoneDisplay = document.getElementById('phone-display');
     const qrContainer = document.getElementById('qr-container');
     const qrImage = document.getElementById('qr-image');
-    const waitingMsg = document.getElementById('waiting-msg');
+    const spinnerContainer = document.getElementById('spinner-container');
     const btnLogout = document.getElementById('btn-logout');
-    const btnReconnect = document.getElementById('btn-reconnect');
+    const btnLink = document.getElementById('btn-link');
+    const btnReloadQr = document.getElementById('btn-reload-qr');
+    const btnUseHere = document.getElementById('btn-use-here');
 
     let currentQR = '';
 
@@ -102,44 +122,96 @@
         const data = await res.json();
         updateUI(data);
       } catch {
-        updateUI({ status: 'disconnected' });
+        updateUI({ status: 'error', statusMessage: 'No se pudo conectar al servidor' });
+      }
+    }
+
+    function hideAll() {
+      statusMsg.style.display = 'none';
+      phoneDisplay.style.display = 'none';
+      qrContainer.style.display = 'none';
+      spinnerContainer.style.display = 'none';
+      btnLogout.style.display = 'none';
+      btnLink.style.display = 'none';
+      btnReloadQr.style.display = 'none';
+      btnUseHere.style.display = 'none';
+    }
+
+    function showStatusMessage(msg) {
+      if (msg) {
+        statusMsg.textContent = msg;
+        statusMsg.style.display = 'block';
       }
     }
 
     function updateUI(data) {
-      // Reset visibility
-      phoneDisplay.style.display = 'none';
-      qrContainer.style.display = 'none';
-      waitingMsg.style.display = 'none';
-      btnLogout.style.display = 'none';
-      btnReconnect.style.display = 'none';
-
+      hideAll();
       badge.className = 'status-badge';
 
-      if (data.status === 'connected') {
-        badge.classList.add('status-connected');
-        badge.textContent = 'connected';
-        phoneDisplay.style.display = 'block';
-        phoneDisplay.textContent = data.phone || 'Phone connected';
-        btnLogout.style.display = 'inline-block';
-        currentQR = '';
-      } else if (data.status === 'connecting') {
-        badge.classList.add('status-connecting');
-        badge.textContent = 'connecting';
-        if (data.qrDataUrl && data.qr !== currentQR) {
-          currentQR = data.qr;
-          qrImage.src = data.qrDataUrl;
-        }
-        if (data.qr) {
-          qrContainer.style.display = 'block';
-        } else {
-          waitingMsg.style.display = 'block';
-        }
-      } else {
-        badge.classList.add('status-disconnected');
-        badge.textContent = 'disconnected';
-        btnReconnect.style.display = 'inline-block';
-        currentQR = '';
+      switch (data.status) {
+        case 'idle':
+          badge.classList.add('status-disconnected');
+          badge.textContent = 'desconectado';
+          showStatusMessage(data.statusMessage || 'No hay sesión vinculada');
+          btnLink.style.display = 'inline-block';
+          currentQR = '';
+          break;
+
+        case 'pairing_qr':
+          badge.classList.add('status-connecting');
+          badge.textContent = 'vinculando';
+          if (data.qrDataUrl && data.qr !== currentQR) {
+            currentQR = data.qr;
+            qrImage.src = data.qrDataUrl;
+          }
+          if (data.qr) {
+            qrContainer.style.display = 'block';
+          }
+          break;
+
+        case 'qr_expired':
+          badge.classList.add('status-connecting');
+          badge.textContent = 'QR expirado';
+          showStatusMessage(data.statusMessage || 'El código QR expiró');
+          btnReloadQr.style.display = 'inline-block';
+          currentQR = '';
+          break;
+
+        case 'connecting':
+          badge.classList.add('status-connecting');
+          badge.textContent = 'conectando';
+          spinnerContainer.style.display = 'block';
+          showStatusMessage(data.statusMessage || 'Conectando a WhatsApp…');
+          break;
+
+        case 'connected':
+          badge.classList.add('status-connected');
+          badge.textContent = 'conectado';
+          phoneDisplay.style.display = 'block';
+          phoneDisplay.textContent = data.phone || 'Teléfono conectado';
+          btnLogout.style.display = 'inline-block';
+          currentQR = '';
+          break;
+
+        case 'replaced':
+          badge.classList.add('status-replaced');
+          badge.textContent = 'reemplazado';
+          showStatusMessage(data.statusMessage || 'WhatsApp está abierto en otro dispositivo');
+          btnUseHere.style.display = 'inline-block';
+          break;
+
+        case 'error':
+          badge.classList.add('status-disconnected');
+          badge.textContent = 'error';
+          showStatusMessage(data.statusMessage || 'Error desconocido');
+          btnLink.style.display = 'inline-block';
+          currentQR = '';
+          break;
+
+        default:
+          badge.classList.add('status-disconnected');
+          badge.textContent = data.status || 'desconocido';
+          currentQR = '';
       }
     }
 
@@ -154,16 +226,19 @@
     }
 
     async function doReconnect() {
-      btnReconnect.disabled = true;
+      btnLink.disabled = true;
+      btnReloadQr.disabled = true;
+      btnUseHere.disabled = true;
       try {
         await fetch('/api/session/reconnect', { method: 'POST' });
       } finally {
-        btnReconnect.disabled = false;
+        btnLink.disabled = false;
+        btnReloadQr.disabled = false;
+        btnUseHere.disabled = false;
         pollStatus();
       }
     }
 
-    // Poll every 2 seconds
     setInterval(pollStatus, 2000);
     pollStatus();
   </script>

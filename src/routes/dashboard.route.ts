@@ -14,6 +14,8 @@ export interface DashboardSession extends SessionStatusProvider {
   currentQR(): string | undefined;
   disconnect(clearAuth?: boolean): Promise<void>;
   connect(): Promise<void>;
+  getDashboardStatus(): string;
+  getStatusMessage(): string;
 }
 
 /**
@@ -33,19 +35,26 @@ export function createDashboardRouter(session: DashboardSession): Router {
 
   // ── Session status API ──
   router.get('/api/session/status', async (_req, res) => {
-    if (session.isConnected()) {
-      res.json({ status: 'connected', phone: session.phoneNumber() });
+    const status = session.getDashboardStatus();
+    const statusMessage = session.getStatusMessage();
+
+    if (status === 'connected') {
+      res.json({ status, phone: session.phoneNumber(), statusMessage });
       return;
     }
 
-    const qr = session.currentQR();
-    if (qr) {
-      const qrDataUrl = await QRCode.toDataURL(qr, { width: 260 });
-      res.json({ status: 'connecting', qr: qr, qrDataUrl });
+    if (status === 'pairing_qr') {
+      const qr = session.currentQR();
+      if (qr) {
+        const qrDataUrl = await QRCode.toDataURL(qr, { width: 260 });
+        res.json({ status, qr, qrDataUrl, statusMessage });
+      } else {
+        res.json({ status, statusMessage });
+      }
       return;
     }
 
-    res.json({ status: 'disconnected' });
+    res.json({ status, statusMessage });
   });
 
   // ── Logout ──
@@ -54,9 +63,9 @@ export function createDashboardRouter(session: DashboardSession): Router {
     res.json({ ok: true });
   });
 
-  // ── Reconnect ──
+  // ── Reconnect / Link device ──
   router.post('/api/session/reconnect', async (_req, res) => {
-    await session.disconnect(true);
+    await session.disconnect(false);
     await session.connect();
     res.json({ ok: true });
   });

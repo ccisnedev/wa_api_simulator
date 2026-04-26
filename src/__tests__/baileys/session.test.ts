@@ -3,6 +3,16 @@ import { EventEmitter } from 'node:events';
 import { BaileysSession } from '../../baileys/session.js';
 import type { LidResolver } from '../../baileys/jid-resolver.js';
 
+const { mockExistsSync, mockRmSync } = vi.hoisted(() => ({
+  mockExistsSync: vi.fn(() => false),
+  mockRmSync: vi.fn(),
+}));
+
+vi.mock('node:fs', () => ({
+  existsSync: mockExistsSync,
+  rmSync: mockRmSync,
+}));
+
 const mockLidMapping = {
   getPNForLID: vi.fn(async () => null),
   storeLIDPNMappings: vi.fn(),
@@ -34,7 +44,18 @@ vi.mock('@whiskeysockets/baileys', () => {
       state: { creds: {}, keys: {} },
       saveCreds: vi.fn(async () => {}),
     })),
-    DisconnectReason: { loggedOut: 401 },
+    DisconnectReason: {
+      loggedOut: 401,
+      badSession: 500,
+      connectionClosed: 428,
+      connectionLost: 408,
+      connectionReplaced: 440,
+      timedOut: 408,
+      unavailableService: 503,
+      forbidden: 403,
+      multideviceMismatch: 411,
+      restartRequired: 515,
+    },
     Browsers: { ubuntu: (name: string) => [name, 'Ubuntu', '22.04'] },
     fetchLatestBaileysVersion: vi.fn(async () => ({ version: [2, 3000, 1035194821], isLatest: true })),
     makeWASocket: vi.fn(() => {
@@ -51,6 +72,8 @@ describe('BaileysSession', () => {
   let session: BaileysSession;
 
   beforeEach(() => {
+    mockExistsSync.mockReset().mockReturnValue(false);
+    mockRmSync.mockReset();
     session = new BaileysSession({
       authDir: './test_auth',
       onInboundMessage: vi.fn(),
@@ -156,5 +179,112 @@ describe('BaileysSession', () => {
       expect.objectContaining({ key: expect.objectContaining({ id: 'test2' }) }),
       null,
     );
+  });
+
+  // ── hasCredentials ──
+
+  describe('hasCredentials()', () => {
+    it('returns true when creds.json exists', () => {
+      mockExistsSync.mockReturnValue(true);
+      expect(session.hasCredentials()).toBe(true);
+      expect(mockExistsSync).toHaveBeenCalledWith('./test_auth/creds.json');
+    });
+
+    it('returns false when creds.json does not exist', () => {
+      mockExistsSync.mockReturnValue(false);
+      expect(session.hasCredentials()).toBe(false);
+    });
+  });
+
+  // ── handleConnectionUpdate — disconnect categories ──
+
+  describe('handleConnectionUpdate — disconnect categories', () => {
+    function makeBoomError(statusCode: number) {
+      return { output: { statusCode } };
+    }
+
+    function emitClose(statusCode: number) {
+      session.emitConnectionUpdate({
+        connection: 'close',
+        lastDisconnect: { error: makeBoomError(statusCode) },
+      } as any);
+    }
+
+    it('QR timeout (408 + isPairing): qr_expired, clears QR', async () => {
+      mockExistsSync.mockReturnValue(false);
+      await session.connect();
+      // isPairing=true because no credentials; emit QR then close
+      session.emitConnectionUpdate({ qr: 'test_qr' } as any);
+      emitClose(408);
+
+      expect(session.getDashboardStatus()).toBe('qr_expired');
+      expect(session.getStatusMessage()).toBe('El código QR expiró');
+      expect(session.currentQR()).toBeUndefined();
+    });
+
+    it('transient (408 without isPairing): sets connecting', async () => {
+      mockExistsSync.mockReturnValue(true);
+      await session.connect();
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      emitClose(408);
+
+      expect(session.getDashboardStatus()).toBe('connecting');
+    });
+
+    it('terminal (401): deletes auth, sets idle', async () => {
+      mockExistsSync.mockReturnValue(true);
+      await session.connect();
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      emitClose(401);
+
+      expect(mockRmSync).toHaveBeenCalledWith('./test_auth', { recursive: true, force: true });
+      expect(session.getDashboardStatus()).toBe('idle');
+      expect(session.getStatusMessage()).toBe('Sesión cerrada por WhatsApp');
+    });
+
+    it('terminal (500): deletes auth, sets idle', async () => {
+      mockExistsSync.mockReturnValue(true);
+      await session.connect();
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      emitClose(500);
+
+      expect(mockRmSync).toHaveBeenCalledWith('./test_auth', { recursive: true, force: true });
+      expect(session.getDashboardStatus()).toBe('idle');
+      expect(session.getStatusMessage()).toBe('Sesión cerrada por WhatsApp');
+    });
+
+    it('conflict (440): sets replaced', async () => {
+      mockExistsSync.mockReturnValue(true);
+      await session.connect();
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      emitClose(440);
+
+      expect(session.getDashboardStatus()).toBe('replaced');
+      expect(session.getStatusMessage()).toBe('WhatsApp está abierto en otro dispositivo');
+    });
+
+    it('transient (428): sets connecting', async () => {
+      mockExistsSync.mockReturnValue(true);
+      await session.connect();
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      emitClose(428);
+
+      expect(session.getDashboardStatus()).toBe('connecting');
+    });
+
+    it('transient (503): sets connecting', async () => {
+      mockExistsSync.mockReturnValue(true);
+      await session.connect();
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      emitClose(503);
+
+      expect(session.getDashboardStatus()).toBe('connecting');
+    });
   });
 });

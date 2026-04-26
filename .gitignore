@@ -24,3 +24,5 @@ state.json
 
 # Logs
 *.log
+# Inquiry — local cycle state
+.inquiry/
