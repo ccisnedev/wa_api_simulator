@@ -133,14 +133,14 @@ assert session.reconnectAttempts > 0
 **Salida:** `dashboard/index.html` con UI para todos los estados  
 **Archivos:** `src/dashboard/index.html`
 
-- [ ] 4.1 Estado IDLE: badge rojo "Desconectado", mensaje "No hay sesión vinculada", botón verde "Vincular dispositivo" → `POST /api/session/reconnect`
-- [ ] 4.2 Estado PAIRING_QR: badge amarillo "Vinculando", imagen QR, texto "Abre WhatsApp > Dispositivos vinculados > Vincular dispositivo > Escanea el código QR"
-- [ ] 4.3 Estado QR_EXPIRED: badge amarillo "QR expirado", mensaje "El código QR expiró", botón verde "Recargar QR" → `POST /api/session/reconnect`
-- [ ] 4.4 Estado CONNECTING: badge amarillo "Conectando", spinner CSS animado, mensaje "Conectando a WhatsApp..."
-- [ ] 4.5 Estado CONNECTED: badge verde "Conectado", número de teléfono, botón rojo "Cerrar sesión" → `POST /api/session/logout`
-- [ ] 4.6 Estado REPLACED: badge naranja "Sesión reemplazada", mensaje "WhatsApp está abierto en otro dispositivo", botón verde "Usar aquí" → `POST /api/session/reconnect`
-- [ ] 4.7 Estado ERROR: badge rojo "Error", `statusMessage` del servidor, sin botón de acción automática
-- [ ] 4.8 Actualizar función de polling para manejar todos los `status` strings del API
+- [x] 4.1 Estado IDLE: badge rojo "Desconectado", mensaje "No hay sesión vinculada", botón verde "Vincular dispositivo" → `POST /api/session/reconnect`
+- [x] 4.2 Estado PAIRING_QR: badge amarillo "Vinculando", imagen QR, texto "Abre WhatsApp > Dispositivos vinculados > Vincular dispositivo > Escanea el código QR"
+- [x] 4.3 Estado QR_EXPIRED: badge amarillo "QR expirado", mensaje "El código QR expiró", botón verde "Recargar QR" → `POST /api/session/reconnect`
+- [x] 4.4 Estado CONNECTING: badge amarillo "Conectando", spinner CSS animado, mensaje "Conectando a WhatsApp…"
+- [x] 4.5 Estado CONNECTED: badge verde "Conectado", número de teléfono, botón rojo "Cerrar sesión" → `POST /api/session/logout`
+- [x] 4.6 Estado REPLACED: badge naranja "Sesión reemplazada", mensaje "WhatsApp está abierto en otro dispositivo", botón verde "Usar aquí" → `POST /api/session/reconnect`
+- [x] 4.7 Estado ERROR: badge rojo "Error", `statusMessage` del servidor, sin botón de acción automática
+- [x] 4.8 Actualizar función de polling para manejar todos los `status` strings del API
 - [ ] 4.9 Test manual end-to-end:
   - Arrancar sin creds → IDLE → click "Vincular" → PAIRING_QR → esperar ~140s → QR_EXPIRED → click "Recargar" → PAIRING_QR nuevo
   - Arrancar con creds → CONNECTING → CONNECTED
