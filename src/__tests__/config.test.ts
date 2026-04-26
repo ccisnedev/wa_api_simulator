@@ -75,7 +75,9 @@ describe('loadConfig', () => {
   });
 
   it('throws for each missing required variable', async () => {
-    for (const key of Object.keys(REQUIRED_ENV)) {
+    const requiredKeys = ['PHONE_NUMBER', 'PHONE_NUMBER_ID', 'WABA_ID', 'ACCESS_TOKEN'];
+
+    for (const key of requiredKeys) {
       // Reset all
       Object.entries(REQUIRED_ENV).forEach(([k, v]) => {
         process.env[k] = v;
