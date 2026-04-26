@@ -155,14 +155,14 @@ assert session.reconnectAttempts > 0
 **Entrada:** Fases 1-4 completas  
 **Salida:** Suite verde, build OK, documentación de cierre
 
-- [ ] 5.1 Ejecutar `npm test` — suite completa pasa
-- [ ] 5.2 Ejecutar `npm run build` (o `npx tsc --noEmit`) — TypeScript compila sin errores
+- [x] 5.1 Ejecutar `npm test` — suite completa pasa
+- [x] 5.2 Ejecutar `npm run build` (o `npx tsc --noEmit`) — TypeScript compila sin errores
 - [ ] 5.3 Revisión de regresión: verificar que instancia con creds existentes (simular s1) arranca y reconecta normalmente
-- [ ] 5.4 Producir `retrospective.md`:
+- [x] 5.4 Producir `retrospective.md`:
   - Qué salió bien
   - Qué se desvió del plan
   - Qué sorprendió
   - Issues derivados identificados
-- [ ] 5.5 Producir validation report: qué se implementó, cómo verificar, limitaciones conocidas
+- [x] 5.5 Producir validation report: qué se implementó, cómo verificar, limitaciones conocidas
 
 **Verificación:** Todos los tests pasan, build limpio, retrospectiva documenta el ciclo.
