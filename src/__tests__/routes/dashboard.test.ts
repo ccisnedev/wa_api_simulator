@@ -46,6 +46,8 @@ function createMockSession(overrides: Partial<DashboardSession> = {}): Dashboard
     currentQR: () => undefined,
     disconnect: vi.fn(async () => {}),
     connect: vi.fn(async () => {}),
+    getDashboardStatus: () => 'idle',
+    getStatusMessage: () => '',
     ...overrides,
   };
 }
@@ -64,41 +66,74 @@ describe('dashboard routes', () => {
   });
 
   describe('GET /api/session/status', () => {
-    it('returns disconnected status when session is not connected', async () => {
-      const session = createMockSession();
+    it('returns idle status when no session is linked', async () => {
+      const session = createMockSession({
+        getDashboardStatus: () => 'idle',
+        getStatusMessage: () => 'No hay sesión vinculada',
+      });
       const app = express();
       app.use('/', createDashboardRouter(session));
 
       const { status, body } = await injectGet(app, '/api/session/status');
       expect(status).toBe(200);
-      expect(body).toEqual({ status: 'disconnected' });
+      expect(body).toEqual({ status: 'idle', statusMessage: 'No hay sesión vinculada' });
     });
 
     it('returns connected status with phone when session is connected', async () => {
       const session = createMockSession({
         isConnected: () => true,
         phoneNumber: () => '51999000000',
+        getDashboardStatus: () => 'connected',
+        getStatusMessage: () => '',
       });
       const app = express();
       app.use('/', createDashboardRouter(session));
 
       const { status, body } = await injectGet(app, '/api/session/status');
       expect(status).toBe(200);
-      expect(body).toEqual({ status: 'connected', phone: '51999000000' });
+      expect(body).toEqual({ status: 'connected', phone: '51999000000', statusMessage: '' });
     });
 
-    it('returns connecting status with QR when QR is available', async () => {
+    it('returns pairing_qr status with QR when QR is available', async () => {
       const session = createMockSession({
         currentQR: () => 'mock_qr_data_string',
+        getDashboardStatus: () => 'pairing_qr',
+        getStatusMessage: () => '',
       });
       const app = express();
       app.use('/', createDashboardRouter(session));
 
       const { status, body } = await injectGet(app, '/api/session/status');
       expect(status).toBe(200);
-      expect(body.status).toBe('connecting');
+      expect(body.status).toBe('pairing_qr');
       expect(body.qr).toBe('mock_qr_data_string');
       expect(body.qrDataUrl).toMatch(/^data:image\/png;base64,/);
+    });
+
+    it('returns qr_expired status after QR timeout', async () => {
+      const session = createMockSession({
+        getDashboardStatus: () => 'qr_expired',
+        getStatusMessage: () => 'El código QR expiró',
+      });
+      const app = express();
+      app.use('/', createDashboardRouter(session));
+
+      const { status, body } = await injectGet(app, '/api/session/status');
+      expect(status).toBe(200);
+      expect(body).toEqual({ status: 'qr_expired', statusMessage: 'El código QR expiró' });
+    });
+
+    it('returns replaced status when connection is taken by another device', async () => {
+      const session = createMockSession({
+        getDashboardStatus: () => 'replaced',
+        getStatusMessage: () => 'WhatsApp está abierto en otro dispositivo',
+      });
+      const app = express();
+      app.use('/', createDashboardRouter(session));
+
+      const { status, body } = await injectGet(app, '/api/session/status');
+      expect(status).toBe(200);
+      expect(body).toEqual({ status: 'replaced', statusMessage: 'WhatsApp está abierto en otro dispositivo' });
     });
   });
 
@@ -117,15 +152,17 @@ describe('dashboard routes', () => {
   });
 
   describe('POST /api/session/reconnect', () => {
-    it('returns 200 and calls connect', async () => {
+    it('returns 200 and calls disconnect(false) then connect', async () => {
+      const disconnectFn = vi.fn(async () => {});
       const connectFn = vi.fn(async () => {});
-      const session = createMockSession({ connect: connectFn });
+      const session = createMockSession({ disconnect: disconnectFn, connect: connectFn });
       const app = express();
       app.use('/', createDashboardRouter(session));
 
       const { status, body } = await injectPost(app, '/api/session/reconnect');
       expect(status).toBe(200);
       expect(body).toEqual({ ok: true });
+      expect(disconnectFn).toHaveBeenCalledWith(false);
       expect(connectFn).toHaveBeenCalled();
     });
   });

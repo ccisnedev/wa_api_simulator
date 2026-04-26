@@ -106,8 +106,8 @@ assert session.reconnectAttempts > 0
 **Salida:** API `/api/session/status` expone todos los estados, `reconnect` no borra creds  
 **Archivos:** `src/routes/dashboard.route.ts`, tests
 
-- [ ] 3.1 Extender `DashboardSession` interface: agregar `getDashboardStatus(): string` y `getStatusMessage(): string`
-- [ ] 3.2 Modificar `GET /api/session/status` para usar `getDashboardStatus()`:
+- [x] 3.1 Extender `DashboardSession` interface: agregar `getDashboardStatus(): string` y `getStatusMessage(): string`
+- [x] 3.2 Modificar `GET /api/session/status` para usar `getDashboardStatus()`:
   ```
   idle         → { status: 'idle', statusMessage }
   pairing_qr   → { status: 'pairing_qr', qr, qrDataUrl, statusMessage }
@@ -117,9 +117,9 @@ assert session.reconnectAttempts > 0
   replaced      → { status: 'replaced', statusMessage }
   error         → { status: 'error', statusMessage }
   ```
-- [ ] 3.3 **CORRECCIÓN:** Modificar `POST /api/session/reconnect` — cambiar `disconnect(true)` a `disconnect(false)`. Este endpoint se reutiliza para "Vincular dispositivo", "Recargar QR" y "Usar aquí" — ninguno debe borrar creds
-- [ ] 3.4 Actualizar tests de dashboard.route para los nuevos estados (`idle`, `pairing_qr`, `qr_expired`, `replaced`)
-- [ ] 3.5 Ejecutar `npm test` — todos los tests pasan
+- [x] 3.3 **CORRECCIÓN:** Modificar `POST /api/session/reconnect` — cambiar `disconnect(true)` a `disconnect(false)`. Este endpoint se reutiliza para "Vincular dispositivo", "Recargar QR" y "Usar aquí" — ninguno debe borrar creds
+- [x] 3.4 Actualizar tests de dashboard.route para los nuevos estados (`idle`, `pairing_qr`, `qr_expired`, `replaced`)
+- [x] 3.5 Ejecutar `npm test` — todos los tests pasan
 
 **Verificación:** `curl /api/session/status` retorna el estado correcto según el `dashboardState` interno de la sesión.
 

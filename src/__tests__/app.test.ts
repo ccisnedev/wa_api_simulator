@@ -10,6 +10,8 @@ function createMockSession(): DashboardSession {
     currentQR: () => undefined,
     disconnect: vi.fn(async () => {}),
     connect: vi.fn(async () => {}),
+    getDashboardStatus: () => 'connected',
+    getStatusMessage: () => '',
     asStatusProvider: () => ({ isConnected: () => true, phoneNumber: () => '51999000000' }),
     asMessageSender: () => ({ sendTextMessage: vi.fn(async () => {}) }),
   } as any;
