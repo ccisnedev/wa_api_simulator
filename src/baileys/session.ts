@@ -118,6 +118,9 @@ export class BaileysSession {
     this.qrCode = undefined;
     this.phone = undefined;
     this.reconnectAttempts = 0;
+    this.isPairing = false;
+    this.dashboardState = 'idle';
+    this.statusMessage = clearAuth ? '' : 'Sesión desconectada';
   }
 
   isConnected(): boolean {
