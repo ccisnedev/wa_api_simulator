@@ -120,7 +120,7 @@ export class BaileysSession {
     this.reconnectAttempts = 0;
     this.isPairing = false;
     this.dashboardState = 'idle';
-    this.statusMessage = clearAuth ? '' : 'Sesión desconectada';
+    this.statusMessage = '';
   }
 
   isConnected(): boolean {
